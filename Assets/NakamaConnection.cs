@@ -22,6 +22,8 @@ public class NakamaConnection : MonoBehaviour
     private IClient client; 
     private ISession session; 
     private ISocket socket; // allow to send and recive message thought nakama sever 
+    
+    private string ticket; // save ticket when find match
     async void Start()
     {
         // create client for connection
@@ -35,10 +37,33 @@ public class NakamaConnection : MonoBehaviour
         socket = client.NewSocket();
         await socket.ConnectAsync(session, true);
         
+        // add unity action to matchmaking event  -> this method will run if socket get a matchmaking ticket from socket
+        socket.ReceivedMatchmakerMatched += OnReciveMatchMakingMatched;
+        
         // 
         Debug.Log(session);
         Debug.Log(socket);
     }
 
-   
+    public async void FindGame()
+    {
+        Debug.Log("Finding match");
+
+        var matchMakingTicket = await socket.AddMatchmakerAsync("*", 2, 2);
+        ticket = matchMakingTicket.Ticket;
+    }
+
+
+    private async void OnReciveMatchMakingMatched(IMatchmakerMatched matchmakerMatched)
+    {
+        var match = await socket.JoinMatchAsync(matchmakerMatched);
+        
+        // this session
+        Debug.Log("Our session ID: " + match.Self.SessionId);
+
+        foreach (var user in match.Presences) //  user in match
+        {
+            Debug.Log("Connected user session ID: " + user.SessionId);
+        }
+    }
 }
